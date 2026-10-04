@@ -95,7 +95,7 @@ Double-click it → **Turn ON**. This loads both background jobs; the share moun
 
 ## 3. Agent rules
 
-Copy [`agent-rules/AGENTS.md`](../agent-rules/AGENTS.md) to the root of the share. For Antigravity, also save it as `GEMINI.md`. Adjust the host alias (`my-server`) and the path (`~/Codes`).
+Copy [`agent-rules/AGENTS.md`](../agent-rules/AGENTS.md) to the root of the share. Also save it as `GEMINI.md` for Antigravity or `CLAUDE.md` for Claude Code. Adjust the host alias (`my-server`) and the path (`~/Codes`).
 
 ## Verify
 

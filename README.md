@@ -1,4 +1,4 @@
-# Remote Workspace
+# Agent Remote Workspace
 
 **Let local-only AI agents work on a remote Linux server — files mount on your Mac, commands run on the server, and the connection heals itself.**
 
@@ -9,13 +9,15 @@
 
 Antigravity 2.0's Agent Manager — like several other AI coding tools — **only works on local folders**. There's no "connect to remote host" button. But you want the heavy work (builds, `npm install`, dev servers, Docker, test runs) on a Linux box, not on a laptop that heats up and throttles.
 
-Remote Workspace makes a server folder **look local** to any editor or agent, and keeps it that way:
+Agent Remote Workspace makes a server folder **look local** to any editor or agent, and keeps it that way:
 
 - 📁 **Your code lives on the server**, shown on the Mac as a normal folder via macOS's built-in SMB client — nothing to install on the Mac side for file access.
 - 🖥️ **Every command runs on the server** over SSH. A rules file (`AGENTS.md` / `GEMINI.md`) tells the AI agent so, and reused SSH connections make each command start instantly.
 - 🔁 **Self-healing:** Wi-Fi drops, sleep, server reboots — the share comes back **within seconds**, triggered by network events instead of constant polling.
 - 🌐 **Previews just work:** `http://localhost:3000` on the Mac opens the dev server running on the Linux box.
 - 🧊 **The Mac stays cool:** no local builds, no `node_modules` crawling, nothing running in a loop.
+
+**Works with** any editor or AI agent that edits local folders and runs terminal commands — the rules file is plain [`AGENTS.md`](agent-rules/AGENTS.md) (copy it as `GEMINI.md` for Gemini/Antigravity, `CLAUDE.md` for Claude Code). Built and tested daily with **Google Antigravity 2.0**.
 
 ---
 
@@ -63,7 +65,7 @@ flowchart LR
 You need: a Mac, an Ubuntu server, and [Tailscale](https://tailscale.com) on both.
 
 ```bash
-git clone https://github.com/<you>/remote-workspace && cd remote-workspace
+git clone https://github.com/<you>/agent-remote-workspace && cd agent-remote-workspace
 
 # On the server
 ./install-server.sh        # asks for the Mac's Tailscale IP, sets up the share + network watcher
@@ -74,7 +76,7 @@ git clone https://github.com/<you>/remote-workspace && cd remote-workspace
 
 Then: Finder → **Go → Connect to Server** → `smb://you@my-server/Codes` once (saves the password in Keychain), and double-click **Toggle Workspace** on the Desktop.
 
-Copy [`agent-rules/AGENTS.md`](agent-rules/AGENTS.md) to the root of your share (also as `GEMINI.md` for Antigravity) so the agent runs every command on the server.
+Copy [`agent-rules/AGENTS.md`](agent-rules/AGENTS.md) to the root of your share (also as `GEMINI.md` for Antigravity, `CLAUDE.md` for Claude Code) so the agent runs every command on the server.
 
 ➡️ Manual setup and every option: [docs/SETUP.md](docs/SETUP.md)
 

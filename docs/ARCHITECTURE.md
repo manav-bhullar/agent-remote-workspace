@@ -1,6 +1,6 @@
 # Architecture
 
-Remote Workspace has one job: **keep a server folder mounted on the Mac, and get it back fast when something breaks** — without burning the Mac's CPU on constant checks.
+Agent Remote Workspace has one job: **keep a server folder mounted on the Mac, and get it back fast when something breaks** — without burning the Mac's CPU on constant checks.
 
 ## Components
 

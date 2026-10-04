@@ -59,6 +59,6 @@ cat <<EOF
 Next:
   - Recommended: allow SMB/SSH only over Tailscale:
       sudo ufw allow in on tailscale0 && sudo ufw default deny incoming && sudo ufw enable
-  - Copy agent-rules/AGENTS.md to $SHARE_PATH/ (and as GEMINI.md for Antigravity).
+  - Copy agent-rules/AGENTS.md to $SHARE_PATH/ (and as GEMINI.md for Antigravity, CLAUDE.md for Claude Code).
   - Run ./install-mac.sh on the Mac.
 EOF
