@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!-- Runs the reconnect check when the Mac's network changes, every 5 min as a safety net, and at login.
-     Replace __HOME__ with your home folder (the README's install step does this). -->
+     install-mac.sh fills in the home-folder placeholder below. -->
 <plist version="1.0">
 <dict>
     <key>Label</key>

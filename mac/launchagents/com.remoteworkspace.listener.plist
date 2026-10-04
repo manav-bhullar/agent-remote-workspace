@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Keeps the doorbell (mac-listener) running. Replace __HOME__ with your home folder. -->
+<!-- Keeps the doorbell (mac-listener) running. install-mac.sh fills in the home-folder placeholder below. -->
 <plist version="1.0">
 <dict>
     <key>Label</key>

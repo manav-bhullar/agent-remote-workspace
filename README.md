@@ -1,14 +1,21 @@
 # Remote Workspace
 
-**Code on a Mac, run everything on a Linux server — even with an editor that has no "Remote SSH" mode.**
+**Let local-only AI agents work on a remote Linux server — files mount on your Mac, commands run on the server, and the connection heals itself.**
 
-Google Antigravity (and some other AI editors) can't attach to a remote machine the way VS Code Remote-SSH or Cursor can. This repo is the workaround I use every day:
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![macOS](https://img.shields.io/badge/client-macOS-black)
+![Ubuntu](https://img.shields.io/badge/server-Ubuntu-E95420)
+![No polling](https://img.shields.io/badge/reconnect-event--driven-brightgreen)
 
-- **Files** live on an Ubuntu server and appear on the Mac through an **SMB share** — the editor just sees a normal folder.
-- **Commands** (builds, installs, git, dev servers) run on the server over **SSH**, enforced by a rules file the AI agent reads.
-- The connection is **self-healing**: when either machine's network drops and comes back, the share is remounted within seconds — driven by events, not polling.
+Antigravity 2.0's Agent Manager — like several other AI coding tools — **only works on local folders**. There's no "connect to remote host" button. But you want the heavy work (builds, `npm install`, dev servers, Docker, test runs) on a Linux box, not on a laptop that heats up and throttles.
 
-The Mac stays cool and quiet; the server does the heavy lifting.
+Remote Workspace makes a server folder **look local** to any editor or agent, and keeps it that way:
+
+- 📁 **Your code lives on the server**, shown on the Mac as a normal folder via macOS's built-in SMB client — nothing to install on the Mac side for file access.
+- 🖥️ **Every command runs on the server** over SSH. A rules file (`AGENTS.md` / `GEMINI.md`) tells the AI agent so, and reused SSH connections make each command start instantly.
+- 🔁 **Self-healing:** Wi-Fi drops, sleep, server reboots — the share comes back **within seconds**, triggered by network events instead of constant polling.
+- 🌐 **Previews just work:** `http://localhost:3000` on the Mac opens the dev server running on the Linux box.
+- 🧊 **The Mac stays cool:** no local builds, no `node_modules` crawling, nothing running in a loop.
 
 ---
 
@@ -17,138 +24,92 @@ The Mac stays cool and quiet; the server does the heavy lifting.
 ```mermaid
 flowchart LR
     subgraph Mac
-        E[Editor + AI agent] -- edits files --> M[/Volumes/Codes<br/>SMB mount/]
-        E -- "ssh my-server '…'" --> S
-        L[mac-listener<br/>doorbell :4455] --> R[auto-mount-smb.sh<br/>reconciler]
-        W[launchd WatchPaths<br/>Mac network change] --> R
+        A[AI agent / editor] -- reads & edits --> M["/Volumes/Codes<br/>SMB mount"]
+        A -- "ssh my-server '…'" --> SSH
+        D[Doorbell<br/>mac-listener :4455] --> R[Reconciler<br/>auto-mount-smb.sh]
+        W[Mac network change<br/>launchd WatchPaths] --> R
         T[5-min safety check] --> R
-        R -- mounts / repairs --> M
-        G[Toggle Workspace.app] -. on/off .-> L & W
+        R -- mount / repair --> M
     end
-    subgraph Server [Ubuntu server]
-        S[sshd] --> C[(~/Codes)]
-        B[smbd] --> C
-        N[mac-wakeup.sh<br/>watches network] -- "rings :4455" --> L
+    subgraph Server [Linux server]
+        SSH[sshd] --> C[(~/Codes)]
+        SMB[smbd] --> C
+        N[Network watcher<br/>mac-wakeup.sh] -- rings --> D
     end
-    M <-- SMB over Tailscale --> B
+    M <-- SMB over Tailscale --> SMB
 ```
 
-| Piece | Where | Job |
+1. When the **server's** network changes, it **rings a doorbell** on the Mac (a tiny TCP listener), retrying every second until the Mac answers.
+2. When the **Mac's** network changes, macOS itself triggers the same check.
+3. A **reconciler** script compares "should be mounted" with "is mounted": it detects frozen mounts, leftover empty folders and missing connections, and fixes each one safely.
+4. A **5-minute check** catches anything the events missed. Events make it fast; the check makes it reliable.
+
+➡️ Deep dive: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+## What it handles
+
+| Situation | Result |
+|---|---|
+| Wi-Fi blip on either side | Remounted in seconds, one check (not a flood) |
+| Laptop wakes from sleep | Mac's own network trigger remounts |
+| Server reboots | Server rings the Mac as soon as it's back |
+| Mount looks connected but is frozen | Detected (3 strikes), safely unmounted, remounted |
+| Wake-up arrives mid-check | Queued, one re-check right after (never lost) |
+| Server unreachable | One notification, then quiet automatic recovery |
+| You're done for the day | One click **Toggle Workspace → OFF** (polite eject, asks before forcing) |
+
+## Quick start
+
+You need: a Mac, an Ubuntu server, and [Tailscale](https://tailscale.com) on both.
+
+```bash
+git clone https://github.com/<you>/remote-workspace && cd remote-workspace
+
+# On the server
+./install-server.sh        # asks for the Mac's Tailscale IP, sets up the share + network watcher
+
+# On the Mac
+./install-mac.sh           # asks for server name/user/share, builds the doorbell, installs background jobs
+```
+
+Then: Finder → **Go → Connect to Server** → `smb://you@my-server/Codes` once (saves the password in Keychain), and double-click **Toggle Workspace** on the Desktop.
+
+Copy [`agent-rules/AGENTS.md`](agent-rules/AGENTS.md) to the root of your share (also as `GEMINI.md` for Antigravity) so the agent runs every command on the server.
+
+➡️ Manual setup and every option: [docs/SETUP.md](docs/SETUP.md)
+
+## Why not just…?
+
+| Option | Good at | Why it didn't fit here |
 |---|---|---|
-| `server/mac-wakeup.sh` + `.service` | Server | Watches the server's network (`ip monitor`). After a burst of changes settles (2 s), it **rings the Mac's doorbell** — every second until the Mac answers (max 5 min). |
-| `mac/mac-listener.swift` | Mac | The doorbell: a tiny TCP listener on port 4455. Only reacts to Tailscale addresses. Exits on any socket error so launchd restarts it (never spins). |
-| `mac/auto-mount-smb.sh` | Mac | The **reconciler**: checks network → SMB port → mount → stale/ghost mount → remount → verify. Locked so only one runs at a time; wake-ups that arrive mid-run are **queued** and trigger one re-check. |
-| `mac/launchagents/*.plist` | Mac | Runs the reconciler on Mac network changes (`WatchPaths`), every 5 min, and at login; keeps the doorbell alive. |
-| `mac/toggle-workspace.applescript` | Mac | One-click ON/OFF. OFF ejects politely and only force-disconnects if you agree. ON waits for the share and opens the editor. |
-| `agent-rules/AGENTS.md` | Share root | Tells the AI agent: never run commands on the Mac; run them via `ssh my-server`; dev servers in tmux; don't crawl `node_modules`. |
-| `mac/ssh_config.example` | Mac | Connection reuse (instant SSH commands) and `localhost:3000/5173` forwarding for dev-server previews. |
-
-### Why three triggers?
-
-Events are fast but can be missed; checks are reliable but slow. So it uses both — the same idea Kubernetes uses (events are just "go look" nudges; the reconciler always compares *desired* vs *actual* state):
-
-| Trigger | Catches |
-|---|---|
-| Server rings the doorbell | Server's network came back |
-| Mac `WatchPaths` | Mac's Wi-Fi changed / woke from sleep |
-| 5-minute check | Anything the two events missed |
-
-### From polling to interrupts
-
-The first version simply polled every few seconds: is the share alive? That meant constant work on the Mac and slow, jittery recovery. The current version is **interrupt-driven** — nothing runs until a network event happens — with the 5-minute check kept only as a safety net.
-
-### Failure cases it handles
-
-| Situation | What happens |
-|---|---|
-| Wi-Fi blips | Burst of events → one ring → one remount check |
-| Mac not reachable yet when the server rings | Server keeps ringing every second until it answers |
-| Ring arrives while a check is running | Queued; one re-check runs right after |
-| Share mounted but frozen (stale) | 3 failed checks → safe forced unmount → remount |
-| Empty leftover `/Volumes/Codes` folder | Removed, then mounted properly |
-| Server down | Fails quietly (one notification), recovers automatically when it's back |
-| Doorbell can't start (port busy) | Exits, launchd restarts it 10 s later |
-
----
-
-## Requirements
-
-- Mac (tested on macOS 27) with Xcode Command Line Tools (`swiftc`, `osacompile`)
-- Ubuntu server with Samba, OpenSSH, `iproute2`, `netcat-openbsd`, `tmux`
-- [Tailscale](https://tailscale.com) on both (or any network where the two can reach each other)
-
-## Setup
-
-Replace `my-server`, `my-user`, `100.x.y.z` and paths with your own values.
-
-### 1. Server
-
-```bash
-# Share your code folder over SMB
-sudo apt install samba tmux netcat-openbsd
-sudo tee -a /etc/samba/smb.conf < server/smb.conf.example   # edit path/user first
-sudo smbpasswd -a my-user && sudo smbpasswd -e my-user
-sudo systemctl restart smbd
-
-# The doorbell ringer (set MAC_IP inside the script first)
-mkdir -p ~/.scripts ~/.config/systemd/user
-cp server/mac-wakeup.sh ~/.scripts/ && chmod +x ~/.scripts/mac-wakeup.sh
-cp server/mac-wakeup.service ~/.config/systemd/user/
-systemctl --user daemon-reload && systemctl --user enable --now mac-wakeup
-loginctl enable-linger "$USER"     # keep it running without an open login session
-```
-
-### 2. Mac
-
-```bash
-mkdir -p ~/.scripts ~/.ssh/sockets
-
-# SSH: add mac/ssh_config.example to ~/.ssh/config (edit host/user/IP)
-
-# Reconciler (edit the "Configure these" block first)
-cp mac/auto-mount-smb.sh ~/.scripts/ && chmod +x ~/.scripts/auto-mount-smb.sh
-
-# Doorbell
-swiftc -O mac/mac-listener.swift -o ~/.scripts/mac-listener
-
-# Background jobs
-for f in mac/launchagents/*.plist; do
-  sed "s|__HOME__|$HOME|g" "$f" > ~/Library/LaunchAgents/"$(basename "$f")"
-done
-
-# Mount once by hand so macOS saves the SMB password in Keychain:
-#   Finder → Go → Connect to Server → smb://my-user@my-server/Codes
-
-# On/off switch
-osacompile -o ~/Desktop/"Toggle Workspace.app" mac/toggle-workspace.applescript
-```
-
-Double-click **Toggle Workspace** → **Turn ON**.
-
-### 3. Agent rules
-
-Copy `agent-rules/AGENTS.md` to the root of the share (and as `GEMINI.md` for Antigravity), adjusting the host alias and path.
-
----
+| **VS Code / Cursor Remote-SSH** | Full remote editor experience | Doesn't help agents that only work locally (e.g. Antigravity 2.0 Agent Manager) |
+| **sshfs** | Zero server setup | Needs macFUSE (third-party kernel extension) on macOS; no reconnect logic |
+| **Mutagen / Syncthing** | Fast local file access | Keeps **two copies** in sync — conflicts, and huge folders like `node_modules` must be carefully excluded |
+| **git push / pull** | Simple, versioned | Manual; edits aren't live on the server |
+| **This repo** | Built-in macOS SMB + SSH, single copy of every file, event-driven self-healing | Needs the network; large file trees are slower to browse than a local disk |
 
 ## Daily use
 
-- **Start/stop:** Toggle Workspace on the Desktop.
-- **Status:** `~/.scripts/auto-mount-smb.sh --status`
-- **Mac log:** `tail ~/Library/Logs/RemoteWorkspace.log`
-- **Server log:** `journalctl --user -u mac-wakeup`
-- **Dev server preview:** agent starts it in tmux on the server → open `http://localhost:3000` on the Mac.
-
-## Troubleshooting
-
-| Symptom | Check |
+| | |
 |---|---|
-| Share never mounts | `--status`; mount once via Finder so Keychain has the password |
-| Doorbell not answering | `lsof -nP -iTCP:4455 -sTCP:LISTEN` on the Mac; is the workspace toggled ON? |
-| Server rings but nothing happens | Is the ring coming from a Tailscale address (100.64.0.0/10)? |
-| `localhost:3000` empty | Is the dev server running on the server (`tmux ls`)? Restart SSH: `ssh -O exit my-server` |
-| Notifications don't show | They appear under **Script Editor** in macOS notification settings |
+| Start / stop | **Toggle Workspace** on the Desktop |
+| Health check | `~/.scripts/auto-mount-smb.sh --status` |
+| Mac log | `tail ~/Library/Logs/RemoteWorkspace.log` |
+| Server log | `journalctl --user -u mac-wakeup` |
+| Dev preview | agent starts it in `tmux` on the server → open `localhost:3000` |
+
+Something off? [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+
+## Security notes
+
+- Keep SMB and SSH reachable **only over Tailscale** (or another private network). A firewall rule like `ufw allow in on tailscale0` plus `ufw default deny incoming` does this.
+- The doorbell ignores anything not coming from a Tailscale address (`100.64.0.0/10`), and a ring can only trigger a health check — never run arbitrary commands.
+- The SMB password lives in the macOS Keychain; no secrets are stored in these scripts.
+
+## Contributing
+
+Issues and PRs welcome — especially Linux/Windows clients, other editors, and real-world failure cases. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-MIT
+[MIT](LICENSE) © 2026 Manav Bhullar
