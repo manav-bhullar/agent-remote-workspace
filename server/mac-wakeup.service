@@ -1,0 +1,10 @@
+[Unit]
+Description=Notify Mac on Network Recovery
+
+[Service]
+ExecStart=%h/.scripts/mac-wakeup.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

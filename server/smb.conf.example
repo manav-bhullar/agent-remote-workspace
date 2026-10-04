@@ -1,0 +1,8 @@
+# Append to /etc/samba/smb.conf on the server, then:
+#   sudo smbpasswd -a my-user && sudo smbpasswd -e my-user
+#   sudo systemctl restart smbd
+[Codes]
+    path = /home/my-user/Codes
+    read only = no
+    browsable = yes
+    valid users = my-user

@@ -1,0 +1,17 @@
+# Add to ~/.ssh/config on the Mac.
+# Then create the socket folder once:  mkdir -p ~/.ssh/sockets
+Host my-server
+    HostName 100.x.y.z                 # server's Tailscale IP (or MagicDNS name)
+    User my-user
+    IdentityFile ~/.ssh/id_ed25519
+    AddKeysToAgent yes
+    UseKeychain yes
+    ServerAliveInterval 30
+    ServerAliveCountMax 1200
+    # Reuse one connection: after the first command, every `ssh my-server '...'` starts instantly
+    ControlMaster auto
+    ControlPath ~/.ssh/sockets/%r@%h-%p
+    ControlPersist 4h
+    # Dev-server previews: localhost on the Mac -> localhost on the server
+    LocalForward 3000 localhost:3000   # Next.js
+    LocalForward 5173 localhost:5173   # Vite
