@@ -65,7 +65,7 @@ flowchart LR
 You need: a Mac, an Ubuntu server, and [Tailscale](https://tailscale.com) on both.
 
 ```bash
-git clone https://github.com/<you>/agent-remote-workspace && cd agent-remote-workspace
+git clone https://github.com/manav-bhullar/agent-remote-workspace && cd agent-remote-workspace
 
 # On the server
 ./install-server.sh        # asks for the Mac's Tailscale IP, sets up the share + network watcher
