@@ -12,7 +12,7 @@ Antigravity 2.0's Agent Manager — like several other AI coding tools — **onl
 Agent Remote Workspace makes a server folder **look local** to any editor or agent, and keeps it that way:
 
 - 📁 **Your code lives on the server**, shown on the Mac as a normal folder via macOS's built-in SMB client — nothing to install on the Mac side for file access.
-- 🖥️ **Every command runs on the server** over SSH. A rules file (`AGENTS.md` / `GEMINI.md`) tells the AI agent so, and reused SSH connections make each command start instantly.
+- 🖥️ **Every command runs on the server**, enforced in two layers: a **`remote-runner` MCP tool** gives the agent a command runner that only exists on the server (commands passed as plain lists or scripts, so no `ssh '...'` quoting bugs), and a **shell safety net** forwards `npm`, `python`, `git`… typed on the Mac inside the share to the server, even if the agent forgets its rules.
 - 🔁 **Self-healing:** Wi-Fi drops, sleep, server reboots — the share comes back **within seconds**, triggered by network events instead of constant polling.
 - 🌐 **Previews just work:** `http://localhost:3000` on the Mac opens the dev server running on the Linux box.
 - 🧊 **The Mac stays cool:** no local builds, no `node_modules` crawling, nothing running in a loop. The doorbell used 0.25 s of CPU in 5¾ hours ([measured](docs/ARCHITECTURE.md#measured-footprint)).
@@ -58,6 +58,8 @@ flowchart LR
 | Mount looks connected but is frozen | Detected (3 strikes), safely unmounted, remounted |
 | Wake-up arrives mid-check | Queued, one re-check right after (never lost) |
 | Server unreachable | One notification, then quiet automatic recovery |
+| Agent forgets the rules in a long session and runs `npm run build` on the Mac | Safety net forwards it to the server anyway |
+| Command full of quotes, pipes, heredocs, `awk '{print $1}'` | `run_on_server` takes it as written; no escaping layer to break |
 | You're done for the day | One click **Toggle Workspace → OFF** (polite eject, asks before forcing) |
 
 ## Quick start
@@ -76,7 +78,7 @@ git clone https://github.com/manav-bhullar/agent-remote-workspace && cd agent-re
 
 Then: Finder → **Go → Connect to Server** → `smb://you@my-server/Codes` once (saves the password in Keychain), and double-click **Toggle Workspace** on the Desktop.
 
-Copy [`agent-rules/AGENTS.md`](agent-rules/AGENTS.md) to the root of your share (also as `GEMINI.md` for Antigravity, `CLAUDE.md` for Claude Code) so the agent runs every command on the server.
+Copy [`agent-rules/AGENTS.md`](agent-rules/AGENTS.md) to the root of your share (also as `GEMINI.md` for Antigravity, `CLAUDE.md` for Claude Code) so the agent runs every command on the server, and add the `remote-runner` tool to your agent's MCP config ([example](mac/mcp_config.example.json)).
 
 ➡️ Manual setup and every option: [docs/SETUP.md](docs/SETUP.md)
 

@@ -126,3 +126,34 @@ systemctl --user daemon-reload && systemctl --user enable --now wifi-switcher
 ```
 
 Assumes each saved connection is named after its SSID (the NetworkManager default). Logs: `journalctl --user -u wifi-switcher`.
+
+## 4. Make the agent run commands on the server (remote-runner + safety net)
+
+**remote-runner (MCP tool).** On the server (the installer does this):
+
+```bash
+mkdir -p ~/.local/share/remote-runner
+cp mcp/server.py mcp/run.sh ~/.local/share/remote-runner/
+cd ~/.local/share/remote-runner && uv venv .venv && uv pip install --python .venv/bin/python mcp
+# edit run.sh: RR_SERVER_ROOT = the shared folder here, RR_MAC_ROOT = where the Mac mounts it
+```
+
+On the Mac, add the entry from [`mac/mcp_config.example.json`](../mac/mcp_config.example.json) to your agent's MCP config (Antigravity: **Settings → Customizations → Open MCP Config**, file `~/.gemini/config/mcp_config.json`). The agent then has five tools: `run_on_server`, `start_background`, `read_background`, `stop_background`, `list_background`. Nothing new runs on the Mac: the client starts the tool **on the server** through SSH.
+
+Check it from the Mac:
+
+```bash
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"1"}}}' \
+  | /usr/bin/ssh -T -o BatchMode=yes my-server '~/.local/share/remote-runner/run.sh' | head -c 120
+```
+
+**Safety net.** Edit the three `RW_` lines in [`mac/rw-guard.zsh`](../mac/rw-guard.zsh), then:
+
+```bash
+cp mac/rw-guard.zsh ~/.scripts/rw-guard.zsh
+echo '[[ -f ~/.scripts/rw-guard.zsh ]] && source ~/.scripts/rw-guard.zsh' >> ~/.zshenv
+# open a new terminal, then preview without running anything:
+cd /Volumes/Codes/<project> && RW_DRYRUN=1 npm run build
+```
+
+Inside the share, `npm npx node pnpm yarn bun python python3 pip pip3 uv pytest cargo go make docker git` are forwarded to the server. Outside it, nothing changes. Bypass once with `RW_LOCAL=1`.

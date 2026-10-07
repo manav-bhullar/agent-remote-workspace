@@ -6,14 +6,19 @@ Running ANY terminal commands on the local Mac is strictly prohibited to prevent
 ### Mandatory Rules for All Agents & Projects:
 1. **NEVER run terminal commands on the local Mac.**
    - All build commands (`npm run build`, `npm run dev`, `cargo`, `python`), package installs (`npm install`, `pnpm`, `pip`), and git operations (`git add`, `git commit`, `git push`) MUST be executed remotely on the Ubuntu server.
-2. **Execution Format:**
-   - Always run commands over SSH using the `my-server` host alias (from ~/.ssh/config):
-     `ssh my-server 'cd ~/Codes/<current_project> && <your_command>'`
+2. **Execution Format (use the `remote-runner` MCP tools first):**
+   - Run every command with the `run_on_server` tool. Pass `cwd` as the folder you see (e.g. `/Volumes/Codes/<current_project>`); it is mapped to the server automatically.
+     - Simple commands: `command: ["npm", "run", "build"]` (a list, no quoting needed).
+     - Pipes, quotes, heredocs, awk: `script: "npm test 2>&1 | tail -20"` (written exactly as in bash, no extra escaping).
+   - Dev servers and watchers: `start_background` / `read_background` / `stop_background` (see rule 4).
+   - Fallback only if the `remote-runner` tools are unavailable: `ssh my-server 'cd ~/Codes/<current_project> && <your_command>'`
+   - Safety net: in a Mac terminal inside `/Volumes/Codes`, heavy commands (npm, node, python, pip, git, ...) are forwarded to the server automatically. Do not rely on it; use `run_on_server`.
 3. **Local Tools:**
    - Only native file reading and editing tools (`view_file`, `write_to_file`, `replace_file_content`, `list_dir`) are permitted to run locally on the mounted files.
 4. **Dev Servers & Long-Running Commands:**
    - Never run `npm run dev` (or any server/watcher) directly over SSH; it blocks the terminal and dies when the command ends.
-   - Start it in a detached tmux session named after the project, and check its output instead:
+   - Use `start_background` (name, cwd, script), then `read_background` to see output and `stop_background` to stop it.
+   - Fallback without the tools: start it in a detached tmux session named after the project, and check its output instead:
      `ssh my-server 'cd ~/Codes/<current_project> && tmux new -d -s <project> "npm run dev"'`
      `ssh my-server 'tmux capture-pane -pt <project> | tail -20'`   (view output)
      `ssh my-server 'tmux kill-session -t <project>'`              (stop it)

@@ -20,7 +20,7 @@ read -rp "Share name [Codes]: " SHARE_NAME
 SHARE_NAME=${SHARE_NAME:-Codes}
 
 # 1. Network watcher --------------------------------------------------------------
-say "1/2  Installing the network watcher"
+say "1/3  Installing the network watcher"
 mkdir -p "$HOME/.scripts" "$HOME/.config/systemd/user"
 sed "s|^MAC_IP=.*|MAC_IP=\"$MAC_IP\"   # the Mac's Tailscale IP|" server/mac-wakeup.sh > "$HOME/.scripts/mac-wakeup.sh"
 chmod +x "$HOME/.scripts/mac-wakeup.sh"
@@ -33,8 +33,27 @@ if [ "${SKIP_SERVICES:-0}" != 1 ]; then
 fi
 echo "  Watcher installed: ~/.scripts/mac-wakeup.sh (log: journalctl --user -u mac-wakeup)"
 
-# 2. SMB share --------------------------------------------------------------------
-say "2/2  SMB share"
+# 2. remote-runner MCP tool (agents run commands here, not on the Mac) ----------------
+say "2/3  Installing the remote-runner MCP tool"
+RR="$HOME/.local/share/remote-runner"
+mkdir -p "$RR"
+cp mcp/server.py "$RR/server.py"
+cat > "$RR/run.sh" <<RUN
+#!/bin/bash
+export RR_SERVER_ROOT="$SHARE_PATH"
+export RR_MAC_ROOT="/Volumes/$SHARE_NAME"
+exec "\$HOME/.local/share/remote-runner/.venv/bin/python" "\$HOME/.local/share/remote-runner/server.py"
+RUN
+chmod +x "$RR/run.sh"
+if command -v uv >/dev/null; then
+    uv venv -q "$RR/.venv" && uv pip install -q --python "$RR/.venv/bin/python" mcp
+else
+    python3 -m venv "$RR/.venv" && "$RR/.venv/bin/pip" install -q mcp
+fi
+echo "  remote-runner installed: $RR/run.sh"
+
+# 3. SMB share --------------------------------------------------------------------
+say "3/3  SMB share"
 mkdir -p "$SHARE_PATH"
 if grep -qs "^\[$SHARE_NAME\]" /etc/samba/smb.conf; then
     echo "  Share [$SHARE_NAME] already exists in /etc/samba/smb.conf; leaving it alone."
@@ -60,5 +79,5 @@ Next:
   - Recommended: allow SMB/SSH only over Tailscale:
       sudo ufw allow in on tailscale0 && sudo ufw default deny incoming && sudo ufw enable
   - Copy agent-rules/AGENTS.md to $SHARE_PATH/ (and as GEMINI.md for Antigravity, CLAUDE.md for Claude Code).
-  - Run ./install-mac.sh on the Mac.
+  - Run ./install-mac.sh on the Mac. It also connects your AI agent to the remote-runner tool.
 EOF

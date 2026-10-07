@@ -93,3 +93,14 @@ Measured on a real setup (MacBook client, old desktop server, Tailscale) over a 
 Reconnect checks that day: **184** (96 server rings, 88 Mac network changes and 5-minute checks), about 4.5 s each, almost all of it waiting on a ping or settle delay rather than CPU. A 10-second polling loop would have run about 8,640 checks in the same period.
 
 Measure your own Mac with `ps -o %cpu,rss,time -p $(pgrep -x mac-listener)` and `grep -c INIT ~/Library/Logs/RemoteWorkspace.log`.
+
+## Keeping commands off the Mac: tool layer + shell layer
+
+A rules file (`AGENTS.md`) alone is a *prompt-level* guarantee. In long sessions an agent can drift and run `npm run build` in the local shell, and wrapping everything in `ssh my-server '...'` invites quoting bugs. So enforcement happens in two deterministic layers ([suggested on the Google AI Developers Forum](https://discuss.ai.google.dev/t/187327), then extended with a shell guard):
+
+| Layer | How | What it guarantees |
+|---|---|---|
+| **remote-runner (MCP)** | The agent's MCP client runs `ssh -T my-server ~/.local/share/remote-runner/run.sh`. The tool process lives **on the server**; commands arrive as an argv list (`["npm","run","build"]`) or a bash script on stdin | The normal path runs on the server with no quoting layer. Mac paths (`/Volumes/Codes/...`) are mapped to server paths |
+| **Shell safety net** (`rw-guard.zsh`) | zsh functions loaded from `~/.zshenv` wrap heavy commands; inside the share they `ssh` to the server with every argument single-quoted | Even if the agent ignores the tool and its rules, builds and installs typed on the Mac inside the share still run on the server |
+
+Background work (`start_background`) runs in a server-side tmux session wrapped in a subshell, so its output, including the exit code, stays readable after it stops.

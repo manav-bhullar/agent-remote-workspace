@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "remote-runner": {
+      "command": "/usr/bin/ssh",
+      "args": ["-T", "-o", "BatchMode=yes", "my-server", "~/.local/share/remote-runner/run.sh"]
+    }
+  }
+}
