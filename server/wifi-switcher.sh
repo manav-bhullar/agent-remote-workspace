@@ -3,9 +3,9 @@
 # Event-driven: sleeps until NetworkManager reports a signal-strength change, and only keeps a
 # short timer while the signal is weak.
 IFACE="${IFACE:-wlp6s0}"        # Wi-Fi interface (see: nmcli dev)
-WEAK_BELOW="${WEAK_BELOW:-45}"         # signal % (about -78 dBm) under which the connection counts as weak
+WEAK_BELOW="${WEAK_BELOW:-60}"         # signal % under which the connection counts as weak
 WEAK_FOR="${WEAK_FOR:-20}"           # seconds the signal must stay weak before acting
-BETTER_BY="${BETTER_BY:-20}"          # another saved network must be at least this many points stronger
+BETTER_BY="${BETTER_BY:-25}"          # another saved network must be at least this many points stronger
 COOLDOWN="${COOLDOWN:-180}"          # seconds to wait after a switch before switching again
 SCAN_EVERY="${SCAN_EVERY:-30}"         # seconds between rescans while the signal is weak
 QUIET="${QUIET:-2}"               # seconds without new events before evaluating

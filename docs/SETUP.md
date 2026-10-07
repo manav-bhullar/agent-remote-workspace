@@ -115,7 +115,7 @@ tail -5 ~/Library/Logs/RemoteWorkspace.log
 
 If the server sits on hotspots or several Wi-Fi networks, `server/wifi-switcher.sh` moves it to a clearly stronger **saved** network when the current one stays weak. It sleeps until NetworkManager reports a signal change (no polling while the signal is fine). The existing doorbell rings the Mac after each switch.
 
-Defaults (override with environment variables): weak below **45%** (about -78 dBm) for **20 s**, switch only to a network at least **20 points** stronger, rescan every **30 s** while weak, wait **3 min** between switches. Test first with `DRY_RUN=1`.
+Defaults (override with environment variables): weak below **60%** for **20 s**, switch only to a network at least **25 points** stronger, rescan every **30 s** while weak, wait **3 min** between switches. Test first with `DRY_RUN=1`.
 
 ```bash
 # one-time permission (a headless server can't show NetworkManager's password prompt)

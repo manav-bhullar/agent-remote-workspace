@@ -5,7 +5,7 @@
 ### Added
 - **`remote-runner` MCP tool** (`mcp/`). The agent gets `run_on_server`, `start_background`, `read_background`, `stop_background` and `list_background`. The tool runs **on the server**, started by the agent's MCP client over SSH, so nothing new runs on the Mac. Commands are passed as an argv list (`["npm","run","build"]`) or a bash script, so there is no `ssh '...'` quoting layer to break. Mac paths (`/Volumes/Codes/...`) are mapped to server paths automatically. Idea suggested on the [Google AI Developers Forum](https://discuss.ai.google.dev/t/187327).
 - **Shell safety net** (`mac/rw-guard.zsh`). Inside the share, `npm`, `node`, `python`, `pip`, `git`, `cargo`, `docker` and friends typed on the Mac are forwarded to the server, even if an agent forgets its rules in a long session. Outside the share nothing changes. `RW_LOCAL=1` bypasses it, `RW_DRYRUN=1` previews it.
-- **Wi-Fi switcher** (`server/wifi-switcher.sh`). When the server's Wi-Fi stays below 45% for 20 s and a saved network is at least 20 points stronger, it switches. Event-driven (NetworkManager signal events), with a 3-minute cooldown so it never flaps.
+- **Wi-Fi switcher** (`server/wifi-switcher.sh`). When the server's Wi-Fi stays below 60% for 20 s and a saved network is at least 25 points stronger, it switches (tightened from 45% / 20 points after a real case: stuck on a 43% hotspot while a saved one showed 80%). Event-driven (NetworkManager signal events), with a 3-minute cooldown so it never flaps.
 - **Measured footprint** in the docs: the Mac doorbell used 0.25 s of CPU in 5¾ hours; the server's ringer 1.5 s in 2½ hours.
 
 ### Changed
