@@ -1,0 +1,10 @@
+[Unit]
+Description=Switch to a stronger saved Wi-Fi network when the signal stays weak
+
+[Service]
+ExecStart=%h/.scripts/wifi-switcher.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

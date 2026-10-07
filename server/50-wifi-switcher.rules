@@ -1,0 +1,10 @@
+// Lets one user scan for and switch Wi-Fi networks without a password prompt (the server has no screen).
+// Install: replace the placeholder user name below, then
+//   sudo install -m 644 50-wifi-switcher.rules /etc/polkit-1/rules.d/50-wifi-switcher.rules
+polkit.addRule(function(action, subject) {
+    if (subject.user == "YOUR_USER" &&
+        (action.id == "org.freedesktop.NetworkManager.wifi.scan" ||
+         action.id == "org.freedesktop.NetworkManager.network-control")) {
+        return polkit.Result.YES;
+    }
+});

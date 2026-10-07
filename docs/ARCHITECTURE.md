@@ -79,3 +79,17 @@ sequenceDiagram
 | Recovery after a drop | Up to one polling interval | Seconds |
 | Missed events | n/a | Caught by the 5-min safety check |
 | Duplicate triggers | n/a | Collapsed (server) + queued (Mac) |
+
+## Measured footprint
+
+Measured on a real setup (MacBook client, old desktop server, Tailscale) over a day of normal use, including an unstable Wi-Fi link:
+
+| Part | CPU | Memory |
+|---|---|---|
+| Mac doorbell (`mac-listener`) | 0.25 s total over 5 h 45 min, energy impact 0.0 | ~1.4–2.5 MB |
+| Server network watcher (`mac-wakeup`) | ~1.5 s total over 2.5 h (about 0.02% of one core) | ~1.3 MB |
+| Samba | 0% idle; works only while files are read or saved | ~30 MB |
+
+Reconnect checks that day: **184** (96 server rings, 88 Mac network changes and 5-minute checks), about 4.5 s each, almost all of it waiting on a ping or settle delay rather than CPU. A 10-second polling loop would have run about 8,640 checks in the same period.
+
+Measure your own Mac with `ps -o %cpu,rss,time -p $(pgrep -x mac-listener)` and `grep -c INIT ~/Library/Logs/RemoteWorkspace.log`.

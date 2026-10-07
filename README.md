@@ -15,7 +15,7 @@ Agent Remote Workspace makes a server folder **look local** to any editor or age
 - 🖥️ **Every command runs on the server** over SSH. A rules file (`AGENTS.md` / `GEMINI.md`) tells the AI agent so, and reused SSH connections make each command start instantly.
 - 🔁 **Self-healing:** Wi-Fi drops, sleep, server reboots — the share comes back **within seconds**, triggered by network events instead of constant polling.
 - 🌐 **Previews just work:** `http://localhost:3000` on the Mac opens the dev server running on the Linux box.
-- 🧊 **The Mac stays cool:** no local builds, no `node_modules` crawling, nothing running in a loop.
+- 🧊 **The Mac stays cool:** no local builds, no `node_modules` crawling, nothing running in a loop. The doorbell used 0.25 s of CPU in 5¾ hours ([measured](docs/ARCHITECTURE.md#measured-footprint)).
 
 **Works with** any editor or AI agent that edits local folders and runs terminal commands — the rules file is plain [`AGENTS.md`](agent-rules/AGENTS.md) (copy it as `GEMINI.md` for Gemini/Antigravity, `CLAUDE.md` for Claude Code). Built and tested daily with **Google Antigravity 2.0**.
 

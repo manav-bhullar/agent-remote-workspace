@@ -110,3 +110,19 @@ nc -z -w 2 100.x.y.z 4455 && echo answered
 # Mac: the ring should appear as "(Mode: --wakeup)" followed by HEALTHY
 tail -5 ~/Library/Logs/RemoteWorkspace.log
 ```
+
+## Optional: Wi-Fi switcher (server)
+
+If the server sits on hotspots or several Wi-Fi networks, `server/wifi-switcher.sh` moves it to a clearly stronger **saved** network when the current one stays weak. It sleeps until NetworkManager reports a signal change (no polling while the signal is fine). The existing doorbell rings the Mac after each switch.
+
+Defaults (override with environment variables): weak below **45%** (about -78 dBm) for **20 s**, switch only to a network at least **20 points** stronger, rescan every **30 s** while weak, wait **3 min** between switches. Test first with `DRY_RUN=1`.
+
+```bash
+# one-time permission (a headless server can't show NetworkManager's password prompt)
+sed 's/YOUR_USER/'"$USER"'/' server/50-wifi-switcher.rules | sudo tee /etc/polkit-1/rules.d/50-wifi-switcher.rules
+# install
+install -m 755 server/wifi-switcher.sh ~/.scripts/ && install -m 644 server/wifi-switcher.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now wifi-switcher
+```
+
+Assumes each saved connection is named after its SSID (the NetworkManager default). Logs: `journalctl --user -u wifi-switcher`.
